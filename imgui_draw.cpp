@@ -507,6 +507,36 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t use
     AddDrawCmd(); // Force a new command after us (see comment below)
 }
 
+void ImDrawList::AddCallbackPrev(ImDrawCallback callback, void* userdata, size_t userdata_size)
+{
+    IM_ASSERT_PARANOID(CmdBuffer.Size > 0);
+    ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 2];
+    IM_ASSERT(curr_cmd->UserCallback == NULL);
+    IM_ASSERT(curr_cmd->ElemCount != 0);
+
+    curr_cmd->UserCallback = callback;
+    if (userdata_size == 0)
+    {
+        // Store user data directly in command (no indirection)
+        curr_cmd->UserCallbackData = userdata;
+        curr_cmd->UserCallbackDataSize = 0;
+        curr_cmd->UserCallbackDataOffset = -1;
+    }
+    else
+    {
+        // Copy and store user data in a buffer
+        IM_ASSERT(userdata != NULL);
+        IM_ASSERT(userdata_size < (1u << 31));
+        curr_cmd->UserCallbackData = NULL; // Will be resolved during Render()
+        curr_cmd->UserCallbackDataSize = (int)userdata_size;
+        curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
+        _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + (int)userdata_size);
+        memcpy(_CallbacksDataBuf.Data + (size_t)curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
+    }
+
+    AddDrawCmd(); // Force a new command after us (see comment below)
+}
+
 // Compare ClipRect, TextureId and VtxOffset with a single memcmp()
 #define ImDrawCmd_HeaderSize                            (offsetof(ImDrawCmd, VtxOffset) + sizeof(unsigned int))
 #define ImDrawCmd_HeaderCompare(CMD_LHS, CMD_RHS)       (memcmp(CMD_LHS, CMD_RHS, ImDrawCmd_HeaderSize))    // Compare ClipRect, TextureId, VtxOffset
