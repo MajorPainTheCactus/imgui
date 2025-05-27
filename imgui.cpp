@@ -1482,6 +1482,8 @@ void ImGuiIO::AddInputCharacter(unsigned int c)
     e.Source = ImGuiInputSource_Keyboard;
     e.EventId = g.InputEventsNextEventId++;
     e.Text.Char = c;
+
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1538,6 +1540,7 @@ void ImGuiIO::ClearEventsQueue()
 {
     IM_ASSERT(Ctx != NULL);
     ImGuiContext& g = *Ctx;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.clear();
 }
 
@@ -1589,6 +1592,7 @@ void ImGuiIO::ClearInputCharacters()
 static ImGuiInputEvent* FindLatestInputEvent(ImGuiContext* ctx, ImGuiInputEventType type, int arg = -1)
 {
     ImGuiContext& g = *ctx;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     for (int n = g.InputEventsQueue.Size - 1; n >= 0; n--)
     {
         ImGuiInputEvent* e = &g.InputEventsQueue[n];
@@ -1646,6 +1650,7 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
     e.Key.Key = key;
     e.Key.Down = down;
     e.Key.AnalogValue = analog_value;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1701,6 +1706,7 @@ void ImGuiIO::AddMousePosEvent(float x, float y)
     e.MousePos.PosX = pos.x;
     e.MousePos.PosY = pos.y;
     e.MousePos.MouseSource = g.InputEventsNextMouseSource;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1749,6 +1755,7 @@ void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
     e.MouseButton.Button = mouse_button;
     e.MouseButton.Down = down;
     e.MouseButton.MouseSource = g.InputEventsNextMouseSource;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1769,6 +1776,7 @@ void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
     e.MouseWheel.WheelX = wheel_x;
     e.MouseWheel.WheelY = wheel_y;
     e.MouseWheel.MouseSource = g.InputEventsNextMouseSource;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1796,6 +1804,7 @@ void ImGuiIO::AddFocusEvent(bool focused)
     e.Type = ImGuiInputEventType_Focus;
     e.EventId = g.InputEventsNextEventId++;
     e.AppFocused.Focused = focused;
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     g.InputEventsQueue.push_back(e);
 }
 
@@ -9926,6 +9935,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
     int  mouse_button_changed = 0x00;
     ImBitArray<ImGuiKey_NamedKey_COUNT> key_changed_mask;
 
+    std::lock_guard<std::mutex> Lock(g.InputEventsQueueMutex);
     int event_n = 0;
     for (; event_n < g.InputEventsQueue.Size; event_n++)
     {
